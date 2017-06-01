@@ -63,9 +63,7 @@ EOF
 
 #
 # Generate a properly formatted C source/header file
-#
-# Arguments:
-#     1    Source file
+# $1 - source file
 #
 function tool_c_style() {
 	astyle --options=none --lineend=linux --mode=c \
@@ -84,9 +82,7 @@ function tool_c_style() {
 
 #
 # Generate a properly formatted Perl source file
-#
-# Arguments:
-#     1    Source file
+# $1 - source file
 #
 function tool_perl_style() {
 	perltidy < "$1"
@@ -94,9 +90,7 @@ function tool_perl_style() {
 
 #
 # Generate a properly formatted Python source file
-#
-# Arguments:
-#     1    Source file
+# $1 - source file
 #
 function tool_python_style() {
 	yapf --style=pep8 < "$1"
@@ -104,10 +98,8 @@ function tool_python_style() {
 
 #
 # Check the formatting on a file
-#
-# Arguments:
-#     1    Language
-#     2    File to check
+# $1 - language
+# $2 - file to check
 #
 function style_check() {
 	[[ -z "$1" ]] && return
@@ -131,10 +123,8 @@ function style_check() {
 
 #
 # Fix the formatting on a file
-#
-# Arguments:
-#     1    Language
-#     2    File to check
+# $1 - language
+# $2 - file to fix
 #
 function style_fix() {
 	[[ -z "$1" ]] && return
@@ -158,9 +148,7 @@ function style_fix() {
 
 #
 # Identify the file types
-#
-# Arguments:
-#     1    File(s) to check (optional)
+# $1 - file to check (optional)
 #
 function identify() {
 	local type;
