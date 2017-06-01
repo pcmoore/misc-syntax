@@ -49,7 +49,7 @@ function verify_deps() {
 #
 function usage() {
 cat << EOF
-usage: check-syntax [-h]
+usage: check-syntax [-h] [<files>]
 
 code syntax checking tool
 optional arguments:
@@ -137,6 +137,32 @@ function style_fix() {
 }
 
 #
+# Identify the file types
+#
+# Arguments:
+#     1    File(s) to check (optional)
+#
+function identify() {
+	local type;
+
+	[[ -z $# ]] && return
+
+	# only operate on the files that have been passed as arguments
+	CHK_C_LIST=""
+	CHK_PERL_LIST=""
+
+	# try to identify the files and assign them to lists
+	for i in $*; do
+		type="$(file $i | cut -d':' -f 2-)"
+		if echo $type | grep -q "C source"; then
+			CHK_C_LIST="$CHK_C_LIST $i"
+		elif echo $type | grep -q "Perl script"; then
+			CHK_PERL_LIST="$CHK_PERL_LIST $i"
+		fi
+	done
+}
+
+#
 # Perform all known syntax checks for the configured files
 #
 function check() {
@@ -173,11 +199,13 @@ function fix() {
 ####
 # main
 
+verify_deps file
 verify_deps astyle
 verify_deps perltidy
 
 opt_fix=0
 
+# command line parameters
 while getopts "fh" opt; do
 	case $opt in
 	f)
@@ -189,8 +217,12 @@ while getopts "fh" opt; do
 		;;
 	esac
 done
+opt_files=$*
 
-# display the results
+# identify any files passed via the command line
+identify $opt_files
+
+# process the files
 echo "=============== $(date) ==============="
 echo "Code Syntax Check Results (\"check-syntax $*\")"
 if [[ $opt_fix -eq 1 ]]; then
