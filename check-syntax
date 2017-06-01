@@ -27,6 +27,9 @@ CHK_C_EXCLUDE=""
 CHK_PERL_LIST="$(find . -name "*.pl")"
 CHK_PERL_EXCLUDE=""
 
+CHK_PYTHON_LIST="$(find . -name "*.py")"
+CHK_PYTHON_EXCLUDE=""
+
 ####
 # functions
 
@@ -90,6 +93,16 @@ function tool_perl_style() {
 }
 
 #
+# Generate a properly formatted Python source file
+#
+# Arguments:
+#     1    Source file
+#
+function tool_python_style() {
+	yapf --style=pep8 < "$1"
+}
+
+#
 # Check the formatting on a file
 #
 # Arguments:
@@ -107,6 +120,10 @@ function style_check() {
 		;;
 	perl|Perl)
 		tool_perl_style "$2" | \
+			diff -pu --label="$2.orig" "$2" --label="$2" -
+		;;
+	python|Python)
+		tool_python_style "$2" | \
 			diff -pu --label="$2.orig" "$2" --label="$2" -
 		;;
 	esac
@@ -131,6 +148,9 @@ function style_fix() {
 	perl|Perl)
 		tool_perl_style "$2" > "$tmp"
 		;;
+	python|Python)
+		tool_python_style "$2" > "$tmp"
+		;;
 	esac
 	cat "$tmp" > "$2"
 	rm "$tmp"
@@ -150,6 +170,7 @@ function identify() {
 	# only operate on the files that have been passed as arguments
 	CHK_C_LIST=""
 	CHK_PERL_LIST=""
+	CHK_PYTHON_LIST=""
 
 	# try to identify the files and assign them to lists
 	for i in $*; do
@@ -158,6 +179,8 @@ function identify() {
 			CHK_C_LIST="$CHK_C_LIST $i"
 		elif echo $type | grep -q "Perl script"; then
 			CHK_PERL_LIST="$CHK_PERL_LIST $i"
+		elif echo $type | grep -q "Python script"; then
+			CHK_PYTHON_LIST="$CHK_PYTHON_LIST $i"
 		fi
 	done
 }
@@ -177,6 +200,12 @@ function check() {
 		echo "Differences for $i"
 		style_check perl "$i"
 	done
+
+	for i in $CHK_PYTHON_LIST; do
+		echo "$CHK_PYTHON_EXCLUDE" | grep -q "$i" && continue
+		echo "Differences for $i"
+		style_check python "$i"
+	done
 }
 
 #
@@ -194,6 +223,12 @@ function fix() {
 		echo "Fixing $i"
 		style_fix perl "$i"
 	done
+
+	for i in $CHK_PYTHON_LIST; do
+		echo "$CHK_PYTHON_EXCLUDE" | grep -q "$i" && continue
+		echo "Fixing $i"
+		style_fix python "$i"
+	done
 }
 
 ####
@@ -202,6 +237,7 @@ function fix() {
 verify_deps file
 verify_deps astyle
 verify_deps perltidy
+verify_deps yapf
 
 opt_fix=0
 
