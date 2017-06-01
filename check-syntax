@@ -21,10 +21,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-CHK_C_LIST="$(find tests/ -name "*.c") $(find tests/ -name "*.h")"
+CHK_C_LIST="$(find . -name "*.c") $(find . -name "*.h")"
 CHK_C_EXCLUDE=""
 
-CHK_PERL_LIST="$(find tests/ -name "*.pl")"
+CHK_PERL_LIST="$(find . -name "*.pl")"
 CHK_PERL_EXCLUDE=""
 
 ####
