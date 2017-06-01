@@ -153,7 +153,7 @@ function style_fix() {
 function identify() {
 	local type;
 
-	[[ -z $# ]] && return
+	[[ $# -eq 0 ]] && return
 
 	# only operate on the files that have been passed as arguments
 	CHK_C_LIST=""
