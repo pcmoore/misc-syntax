@@ -1,0 +1,204 @@
+#!/bin/bash
+
+#
+# code syntax verification and normalization tool
+#
+
+#
+# Copyright (c) 2013,2015,2017 Red Hat <pmoore@redhat.com>
+# Author: Paul Moore <paul@paul-moore.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of version 2 of the GNU General Public License as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+CHK_C_LIST="$(find tests/ -name "*.c") $(find tests/ -name "*.h")"
+CHK_C_EXCLUDE=""
+
+CHK_PERL_LIST="$(find tests/ -name "*.pl")"
+CHK_PERL_EXCLUDE=""
+
+####
+# functions
+
+#
+# Dependency verification
+#
+# Arguments:
+#     1    Dependency to check for
+#
+function verify_deps() {
+	[[ -z "$1" ]] && return
+	if ! which "$1" >& /dev/null; then
+		echo "error: install \"$1\" and include it in your \$PATH"
+		exit 1
+	fi
+}
+
+#
+# Print out script usage details
+#
+function usage() {
+cat << EOF
+usage: check-syntax [-h]
+
+code syntax checking tool
+optional arguments:
+  -h             show this help message and exit
+  -f             fix the file formatting
+EOF
+}
+
+#
+# Generate a properly formatted C source/header file
+#
+# Arguments:
+#     1    Source file
+#
+function tool_c_style() {
+	astyle --options=none --lineend=linux --mode=c \
+		--style=linux \
+		--indent=force-tab=8 \
+		--indent-preprocessor \
+		--indent-col1-comments \
+		--min-conditional-indent=0 \
+		--max-instatement-indent=80 \
+		--pad-oper \
+		--align-pointer=name \
+		--align-reference=name \
+		--max-code-length=80 \
+		--break-after-logical < "$1"
+}
+
+#
+# Generate a properly formatted Perl source file
+#
+# Arguments:
+#     1    Source file
+#
+function tool_perl_style() {
+	perltidy < "$1"
+}
+
+#
+# Check the formatting on a file
+#
+# Arguments:
+#     1    Language
+#     2    File to check
+#
+function style_check() {
+	[[ -z "$1" ]] && return
+	[[ -z "$2" || ! -r "$2" ]] && return
+
+	case "$1" in
+	c|C)
+		tool_c_style "$2" | \
+			diff -pu --label="$2.orig" "$2" --label="$2" -
+		;;
+	perl|Perl)
+		tool_perl_style "$2" | \
+			diff -pu --label="$2.orig" "$2" --label="$2" -
+		;;
+	esac
+}
+
+#
+# Fix the formatting on a file
+#
+# Arguments:
+#     1    Language
+#     2    File to check
+#
+function style_fix() {
+	[[ -z "$1" ]] && return
+	[[ -z "$2" || ! -w "$2" ]] && return
+
+	tmp="$(mktemp --tmpdir=$(dirname "$2"))"
+	case "$1" in
+	c|C)
+		tool_c_style "$2" > "$tmp"
+		;;
+	perl|Perl)
+		tool_perl_style "$2" > "$tmp"
+		;;
+	esac
+	cat "$tmp" > "$2"
+	rm "$tmp"
+}
+
+#
+# Perform all known syntax checks for the configured files
+#
+function check() {
+	for i in $CHK_C_LIST; do
+		echo "$CHK_C_EXCLUDE" | grep -q "$i" && continue
+		echo "Differences for $i"
+		style_check c "$i"
+	done
+
+	for i in $CHK_PERL_LIST; do
+		echo "$CHK_PERL_EXCLUDE" | grep -q "$i" && continue
+		echo "Differences for $i"
+		style_check perl "$i"
+	done
+}
+
+#
+# Perform all known syntax fixes for the configured files
+#
+function fix() {
+	for i in $CHK_C_LIST; do
+		echo "$CHK_C_EXCLUDE" | grep -q "$i" && continue
+		echo "Fixing $i"
+		style_fix c "$i"
+	done
+
+	for i in $CHK_PERL_LIST; do
+		echo "$CHK_PERL_EXCLUDE" | grep -q "$i" && continue
+		echo "Fixing $i"
+		style_fix perl "$i"
+	done
+}
+
+####
+# main
+
+verify_deps astyle
+verify_deps perltidy
+
+opt_fix=0
+
+while getopts "fh" opt; do
+	case $opt in
+	f)
+		opt_fix=1
+		;;
+	h|*)
+		usage
+		exit 1
+		;;
+	esac
+done
+
+# display the results
+echo "=============== $(date) ==============="
+echo "Code Syntax Check Results (\"check-syntax $*\")"
+if [[ $opt_fix -eq 1 ]]; then
+	fix
+else
+	check
+fi
+echo "============================================================"
+
+# exit
+exit 0
