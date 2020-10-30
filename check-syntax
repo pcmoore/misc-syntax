@@ -234,6 +234,7 @@ while getopts "fh" opt; do
 	case $opt in
 	f)
 		opt_fix=1
+		shift
 		;;
 	h|*)
 		usage
